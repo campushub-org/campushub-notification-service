@@ -5,6 +5,11 @@ const notificationController = require('../controllers/notification.controller')
 // Define routes
 router.get('/teacher/:teacherId', notificationController.getNotificationsByTeacherId);
 
-// Potentially add other notification-related routes here
+// Mark a notification as read
+router.put('/:id/read', notificationController.markAsRead);
+
+// Delete a notification
+router.delete('/:id', notificationController.deleteNotification);
+
 
 module.exports = router;

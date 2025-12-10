@@ -25,7 +25,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use('/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`Running on http://${HOST}:${PORT}`);
