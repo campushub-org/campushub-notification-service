@@ -2,14 +2,16 @@ const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notification.controller');
 
-// Define routes
-router.get('/teacher/:teacherId', notificationController.getNotificationsByTeacherId);
+// Récupérer les notifications pour un utilisateur spécifique
+// L'userId devrait venir d'un middleware d'authentification en production
+router.get('/user/:userId', notificationController.getNotificationsByUserId);
 
-// Mark a notification as read
-router.put('/:id/read', notificationController.markAsRead);
+// Marquer une notification comme lue pour un utilisateur
+// L'ID ici est l'ID de UserNotification
+router.put('/mark-as-read/:userNotificationId', notificationController.markAsRead);
 
-// Delete a notification
-router.delete('/:id', notificationController.deleteNotification);
-
+// Supprimer une notification pour un utilisateur
+// L'ID ici est l'ID de UserNotification
+router.delete('/:userNotificationId', notificationController.deleteNotification);
 
 module.exports = router;

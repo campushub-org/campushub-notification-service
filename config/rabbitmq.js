@@ -1,5 +1,5 @@
 const amqp = require('amqplib');
-const Notification = require('../models/notification.model');
+const notificationController = require('../controllers/notification.controller'); // Import the notification controller
 
 const RABBITMQ_HOST = process.env.RABBITMQ_HOST || 'rabbitmq';
 const RABBITMQ_USER = process.env.RABBITMQ_USER || 'guest';
@@ -25,19 +25,12 @@ async function startConsumer() {
         channel.consume(QUEUE_NAME, async (msg) => {
             if (msg.content) {
                 try {
-                    const notificationData = JSON.parse(msg.content.toString());
-                    console.log(" [x] Received notification data: %s", JSON.stringify(notificationData, null, 2));
+                    const notificationPayload = JSON.parse(msg.content.toString());
+                    console.log(" [x] Received payload: %s", JSON.stringify(notificationPayload, null, 2));
                     
-                    // Save notification to database
-                    await Notification.create({
-                        supportId: notificationData.supportId,
-                        titre: notificationData.titre,
-                        enseignantId: notificationData.enseignantId,
-                        statut: notificationData.statut,
-                        niveau: notificationData.niveau,
-                        matiere: notificationData.matiere
-                    });
-                    console.log(" [✔] Notification saved to database.");
+                    // The payload itself contains recipientUserIds and the notification data
+                    await notificationController.createNotification(notificationPayload);
+                    console.log(" [✔] Notification and user notifications saved to database.");
 
                 } catch (e) {
                     console.error('Error processing message:', e);

@@ -1,6 +1,5 @@
 const express = require('express');
-const sequelize = require('./config/database');
-const Notification = require('./models/notification.model');
+const db = require('./models');
 const startEurekaClient = require('./config/eureka');
 const { startConsumer } = require('./config/rabbitmq');
 const notificationRoutes = require('./routes/notification.routes');
@@ -32,7 +31,7 @@ const server = app.listen(PORT, HOST, () => {
 });
 
 // Database sync and RabbitMQ consumer start
-sequelize.sync().then(() => {
+db.sequelize.sync().then(() => {
     console.log('Database synced.');
     // Start RabbitMQ consumer
     startConsumer();
