@@ -26,18 +26,27 @@ async function startConsumer() {
             if (msg.content) {
                 try {
                     const notificationPayload = JSON.parse(msg.content.toString());
-                    console.log(" [x] Received payload: %s", JSON.stringify(notificationPayload, null, 2));
+                    console.log(" [x] Received RabbitMQ payload: %s", JSON.stringify(notificationPayload, null, 2));
                     
-                    // The payload itself contains recipientUserIds and the notification data
-                    await notificationController.createNotification(notificationPayload);
-                    console.log(" [✔] Notification and user notifications saved to database.");
+                    // Save to DB and get the created user notifications list
+                    const createdNotifications = await notificationController.createNotification(notificationPayload);
+                    
+                    // Emit via Socket.io to each recipient's private room
+                    if (Array.isArray(createdNotifications) && global.io) {
+                        createdNotifications.forEach(item => {
+                            console.log(` [📡] Emitting real-time notification to user_${item.userId}`);
+                            global.io.to(`user_${item.userId}`).emit('new_notification', item.notification);
+                        });
+                    }
+
+                    console.log(" [✔] Notification processed and emitted.");
 
                 } catch (e) {
                     console.error('Error processing message:', e);
                 }
             }
         }, {
-            noAck: true // Automatically acknowledge the message
+            noAck: true
         });
 
     } catch (error) {

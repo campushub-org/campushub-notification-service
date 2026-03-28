@@ -3,17 +3,15 @@ const { Notification, UserNotification } = require('../models');
 // Fonction pour créer une notification globale et des entrées par utilisateur
 exports.createNotification = async (notificationPayload) => {
     try {
-        // Le payload contient les IDs des destinataires et les données de la notification
         const { recipientUserIds, ...notificationData } = notificationPayload;
 
         if (!recipientUserIds || !Array.isArray(recipientUserIds) || recipientUserIds.length === 0) {
             console.error('No recipients found in the payload, aborting notification creation.');
-            return;
+            return [];
         }
 
         const { supportId, titre, statut, niveau, matiere, enseignantId } = notificationData;
 
-        // Crée la notification principale
         const newNotification = await Notification.create({
             supportId,
             titre,
@@ -23,16 +21,30 @@ exports.createNotification = async (notificationPayload) => {
             enseignantId
         });
 
-        // Crée des entrées UserNotification pour chaque destinataire
-        const userNotifications = recipientUserIds.map(userId => ({
+        const userNotificationsData = recipientUserIds.map(userId => ({
             userId: userId,
             notificationId: newNotification.id,
             isRead: false
         }));
 
-        await UserNotification.bulkCreate(userNotifications);
+        const createdUserNotifications = await UserNotification.bulkCreate(userNotificationsData);
+        
         console.log(`Notification ${newNotification.id} created for users: ${recipientUserIds.join(', ')}`);
-        return newNotification;
+        
+        // Return array of objects containing userId and the full notification details
+        return createdUserNotifications.map(un => ({
+            userId: un.userId,
+            notification: {
+                id: newNotification.id,
+                userNotificationId: un.id,
+                titre: newNotification.titre,
+                statut: newNotification.statut,
+                niveau: newNotification.niveau,
+                matiere: newNotification.matiere,
+                isRead: un.isRead,
+                createdAt: newNotification.createdAt
+            }
+        }));
 
     } catch (error) {
         console.error('Error creating notification:', error);
