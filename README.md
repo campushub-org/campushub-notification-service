@@ -24,73 +24,91 @@
 
 Le flux d'une notification dans CampusHub suit un parcours optimisé en 4 étapes :
 
-### 1. Émission (Microservices Java)
-Lorsqu'une action métier se produit (ex: un Doyen valide un support de cours), le service concerné (`Support-Service`) publie un message sur l'Exchange RabbitMQ `support_exchange` avec la clé de routage `support.notification`.
-
-### 2. Ingestion & Persistance
-Le service de notification, via son consommateur `amqplib`, capte le message instantanément. 
-- Il extrait les données (titre, matière, statut).
-- Il identifie la liste des destinataires (`recipientUserIds`).
-- Il enregistre la notification en base de données pour permettre la consultation ultérieure (historique).
-
-### 3. Distribution Temps Réel (WebSockets)
-C'est ici que la magie opère. Dès que la notification est sauvegardée :
-- Le service vérifie si les destinataires sont connectés au serveur WebSocket.
-- Il utilise l'instance globale **Socket.io** pour émettre l'événement `new_notification`.
-- Le message est envoyé uniquement dans la "Room" privée de l'utilisateur (`user_${userId}`).
-
-### 4. Réception & UI (Front-end)
-Le client React capte l'événement via le hook `useSocketNotifications`.
-- Un **Toast interactif** (Sonner) apparaît instantanément à l'écran.
-- L'interface se rafraîchit dynamiquement sans rechargement de page.
+1. **Émission (Microservices Java)** : Le `Support-Service` publie un message sur l'Exchange RabbitMQ `support_exchange`.
+2. **Ingestion & Persistance** : Ce service capte le message, identifie les `recipientUserIds` et enregistre la notification en base de données.
+3. **Distribution WebSocket** : Le service vérifie les connexions actives et "pousse" le message via Socket.io dans la room privée `user_${userId}`.
+4. **Réception UI** : Le client React affiche un **Toast interactif** et rafraîchit l'interface dynamiquement.
 
 ---
 
-## 🛠️ Stack Technique
+## 🛠️ Installation et Configuration
 
-- **Runtime :** Node.js 18+ (Alpine Docker image)
-- **Framework :** Express.js (API REST & WebSocket)
-- **Messaging :** RabbitMQ (Topic Exchange)
-- **Temps Réel :** Socket.io 4.7+
-- **ORM :** Sequelize (Dialecte MySQL)
-- **Sécurité :** JSON Web Tokens (Validation synchronisée avec User-Service)
+### 1. Prérequis
+Assurez-vous d'avoir installé les outils suivants sur votre machine :
+- **Node.js** (v18.0.0 ou supérieur)
+- **Docker & Docker Compose** (recommandé pour l'infrastructure)
+- **MySQL 8.0**
+- **RabbitMQ**
+
+### 2. Variables d'Environnement
+Créez un fichier `.env` à la racine du service ou configurez-les dans votre environnement :
+
+| Variable | Description | Valeur par défaut |
+| :--- | :--- | :--- |
+| `PORT` | Port d'écoute du serveur Node.js | `3000` |
+| `JWT_SECRET` | Clé secrète de signature des tokens (doit être identique à User-Service) | `c3b3f4d...` |
+| `DATABASE_URL` | URL de connexion à la base de données MySQL | `mysql://root:root@localhost:3306/db` |
+| `RABBITMQ_HOST` | Hôte du serveur RabbitMQ | `localhost` |
+| `RABBITMQ_USER` | Utilisateur RabbitMQ | `guest` |
+| `RABBITMQ_PASS` | Mot de passe RabbitMQ | `guest` |
+
+### 3. Installation Manuelle (Développement)
+Si vous souhaitez lancer le service sans Docker :
+
+```bash
+# Accéder au dossier
+cd campushub-notification-service
+
+# Installer les dépendances
+npm install
+
+# Lancer le service en mode développement
+node server.js
+```
+
+### 4. Déploiement via Docker (Production / Standard)
+Le service est conçu pour fonctionner dans l'écosystème Docker de CampusHub :
+
+```bash
+# Build de l'image
+docker build -t campushub-notification-service .
+
+# Lancement via Docker Compose (à la racine du projet parent)
+docker compose up -d campushub-notification-service
+```
 
 ---
 
-## 📡 Ports et Connectivité
+## 📡 API & WebSockets
+
+### Endpoints REST
+- `GET /api/notifications/user/:userId` : Récupère l'historique des notifications d'un utilisateur.
+- `PUT /api/notifications/mark-as-read/:userNotificationId` : Marque une notification spécifique comme lue.
+- `DELETE /api/notifications/:userNotificationId` : Supprime une notification de l'utilisateur.
+
+### Événements WebSocket (Socket.io)
+- **Connexion** : Requiert un JWT valide dans le champ `auth.token`.
+- **Émission (`new_notification`)** : Envoyé par le serveur vers le client.
+  ```json
+  {
+    "id": 12,
+    "userNotificationId": 45,
+    "titre": "Support d'Algèbre",
+    "statut": "VALIDÉ",
+    "matiere": "Mathématiques",
+    "createdAt": "2024-03-27T10:00:00Z"
+  }
+  ```
+
+---
+
+## 📡 Ports et Connectivité (Mapping Docker)
 
 | Service | Port Interne | Port Externe (Host) |
 | :--- | :--- | :--- |
-| **API REST & WS** | `3000` | `9095` |
-| **RabbitMQ** | `5672` | `5672` |
-| **MySQL** | `3306` | `3310` |
-
----
-
-## 🛠️ Installation & Développement
-
-### Prérequis
-- Docker & Docker Compose
-- RabbitMQ en cours d'exécution
-
-### Lancement en local
-1. **Installer les dépendances**
-   ```bash
-   npm install
-   ```
-
-2. **Variables d'environnement**
-   ```env
-   PORT=3000
-   JWT_SECRET=c3b3f4d4a5e5b6c6d7e7f8a8b9c9d0e0f1a1b2c2d3e3f4a4b5c5d6e6f7a7b8c8
-   DATABASE_URL=mysql://root:root@localhost:3310/campushub_notification_db
-   RABBITMQ_HOST=localhost
-   ```
-
-3. **Démarrer le service**
-   ```bash
-   node server.js
-   ```
+| **Notification API & WS** | `3000` | `9095` |
+| **RabbitMQ Ingestion** | `5672` | `5672` |
+| **MySQL Storage** | `3306` | `3310` |
 
 ---
 <p align="center">Développé avec précision pour l'écosystème CampusHub</p>
