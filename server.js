@@ -10,7 +10,8 @@ const notificationRoutes = require('./routes/notification.routes');
 // Constants
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
-const JWT_SECRET = process.env.JWT_SECRET || 'c3b3f4d4a5e5b6c6d7e7f8a8b9c9d0e0f1a1b2c2d3e3f4a4b5c5d6e6f7a7b8c8';
+const HEX_SECRET = process.env.JWT_SECRET || 'c3b3f4d4a5e5b6c6d7e7f8a8b9c9d0e0f1a1b2c2d3e3f4a4b5c5d6e6f7a7b8c8';
+const JWT_SECRET = Buffer.from(HEX_SECRET, 'hex');
 
 // App Setup
 const app = express();
@@ -36,8 +37,11 @@ io.use((socket, next) => {
   const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
 
   jwt.verify(cleanToken, JWT_SECRET, (err, decoded) => {
-    if (err) return next(new Error('Authentication error: Invalid token'));
-    socket.user = decoded; // Contains id, username, role
+    if (err) {
+      console.error('JWT Verification Failed:', err.message);
+      return next(new Error('Authentication error: Invalid token'));
+    }
+    socket.user = decoded;
     next();
   });
 });
@@ -47,7 +51,6 @@ io.on('connection', (socket) => {
   const userId = socket.user.id;
   console.log(`User connected to WebSocket: ${socket.user.username} (ID: ${userId})`);
   
-  // Join a room specific to this user for private notifications
   socket.join(`user_${userId}`);
 
   socket.on('disconnect', () => {
@@ -67,22 +70,19 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/notifications', notificationRoutes);
 
-// Export io for use in other modules (like rabbitmq)
+// Export io for use in other modules
 global.io = io;
 
 // Server start
 server.listen(PORT, HOST, () => {
   console.log(`Running on http://${HOST}:${PORT}`);
   
-  // Database sync and RabbitMQ consumer start
   db.sequelize.sync().then(() => {
       console.log('Database synced.');
-      // Start RabbitMQ consumer
       startConsumer();
   }).catch(err => {
       console.error('Failed to sync database:', err);
   });
 
-  // Start Eureka client
   startEurekaClient(server);
 });

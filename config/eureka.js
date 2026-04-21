@@ -35,14 +35,12 @@ const client = new Eureka({
 });
 
 function startEurekaClient(server) {
-  server.on('listening', () => {
-      client.start(error => {
-          if (error) {
-              console.log('Eureka registration failed:', error);
-          } else {
-              console.log('Eureka registration successful');
-          }
-      });
+  client.start(error => {
+      if (error) {
+          console.log('Eureka registration failed:', error);
+      } else {
+          console.log('Eureka registration successful');
+      }
   });
 
   function exitHandler(options, exitCode) {
