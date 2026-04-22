@@ -5,22 +5,27 @@ const DB_USER = process.env.DB_USER || 'root';
 const DB_PASS = process.env.DB_PASS || 'root';
 const DB_HOST = process.env.DB_HOST || 'localhost';
 
-const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-    host: DB_HOST,
-    dialect: 'mysql',
-    logging: false, // Set to console.log to see SQL queries
-    pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-    }
-});
+const isTest = process.env.NODE_ENV === 'test';
+
+const sequelize = isTest 
+    ? new Sequelize('sqlite::memory:', { logging: false })
+    : new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+        host: DB_HOST,
+        dialect: 'mysql',
+        logging: false,
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
+        }
+    });
 
 const MAX_RETRIES = 10;
 const RETRY_DELAY = 5000; // 5 seconds
 
 async function connectWithRetry(retries = 0) {
+    if (isTest) return; // Skip retry logic in tests
     try {
         await sequelize.authenticate();
         console.log('Database connection has been established successfully.');

@@ -73,16 +73,21 @@ app.use('/api/notifications', notificationRoutes);
 // Export io for use in other modules
 global.io = io;
 
-// Server start
-server.listen(PORT, HOST, () => {
-  console.log(`Running on http://${HOST}:${PORT}`);
-  
-  db.sequelize.sync().then(() => {
-      console.log('Database synced.');
-      startConsumer();
-  }).catch(err => {
-      console.error('Failed to sync database:', err);
-  });
+// Export app and server for testing
+module.exports = { app, server };
 
-  startEurekaClient(server);
-});
+// Server start
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, HOST, () => {
+    console.log(`Running on http://${HOST}:${PORT}`);
+    
+    db.sequelize.sync().then(() => {
+        console.log('Database synced.');
+        startConsumer();
+    }).catch(err => {
+        console.error('Failed to sync database:', err);
+    });
+
+    startEurekaClient(server);
+  });
+}
