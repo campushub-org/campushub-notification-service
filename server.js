@@ -9,7 +9,7 @@ const notificationRoutes = require('./routes/notification.routes');
 
 // Constants
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const HOST = process.env.;
+const HOST = process.env.HOST || '0.0.0.0';
 const HEX_SECRET = process.env.JWT_SECRET || 'c3b3f4d4a5e5b6c6d7e7f8a8b9c9d0e0f1a1b2c2d3e3f4a4b5c5d6e6f7a7b8c8';
 const JWT_SECRET = Buffer.from(HEX_SECRET, 'hex');
 
