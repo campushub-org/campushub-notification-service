@@ -1,6 +1,6 @@
 const { Sequelize } = require('sequelize');
 
-const DB_NAME ='campushub_notification_db';
+const DB_NAME ='notification_db';
 const DB_USER = process.env.RDS_USERNAME ;
 const DB_PASS = process.env.RDS_PASSWORD ;
 const DB_HOST = process.env.RDS_HOSTNAME;
